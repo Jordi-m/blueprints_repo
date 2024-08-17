@@ -1,8 +1,8 @@
 blueprint:
   name: Unavailable entity detection & notification
-  description: Regularly test all entities' status to check for unavailability.
+  description: Regularly test selected entities' status to check for unavailability.
   domain: automation
-  source_url: https://github.com/gmlupatelli/blueprints_repo/blob/master/unavailable_entities_notification/unavailable_entities_notification.yaml
+  source_url: https://github.com/Jordi-m/blueprints_repo/blob/master/unavailable_entities_notification/unavailable_entities_notification.yaml
 
   # Blueprint Inputs
   input:
@@ -56,9 +56,9 @@ blueprint:
       selector:
         boolean:
 
-    exclude:
-      name: Excluded Entities
-      description: Entities (e.g. smartphone) to exclude from detection. Only entities and devices are supported, areas must be expanded!
+    check:
+      name: Check Entities
+      description: Entities (e.g. smartphone) to check during detection. Only entities and devices are supported, areas must be expanded!
       default: {}
       selector:
         target:
@@ -81,23 +81,23 @@ variables:
 
   current_day: '{{ now().weekday() | int }}'
 
-  exclude: !input 'exclude'
+  check: !input 'check'
 
   entities: >-
-    {% set result = namespace(includedEntities=[], excludedEntities = []) %}
+    {% set result = namespace(includedEntities=[], checkEntities = []) %}
 
-    {% if exclude.entity_id is defined %} 
-        {% set result.excludedEntities = result.excludedEntities + ([exclude.entity_id] if exclude.entity_id is string else exclude.entity_id) %}
+    {% if check.entity_id is defined %} 
+        {% set result.checkEntities = result.checkEntities + ([check.entity_id] if check.entity_id is string else check.entity_id) %}
     {% endif %}
 
-    {% if exclude.device_id is defined %}
-      {% for device_id in exclude.device_id %}
-        {% set result.excludedEntities = result.excludedEntities + device_entities(device_id) %}
+    {% if check.device_id is defined %}
+      {% for device_id in check.device_id %}
+        {% set result.checkEntities = result.checkEntities + device_entities(device_id) %}
       {% endfor %}
     {% endif %}
 
     {% for state in states | selectattr('state', 'eq', 'unavailable') %}
-        {% if state.state == 'unavailable' and not state.entity_id in result.excludedEntities and (not device_id(state.entity_id) or not device_attr(device_id(state.entity_id), 'disabled_by')) %}
+        {% if state.state == 'unavailable' and state.entity_id in result.checkEntities and (not device_id(state.entity_id) or not device_attr(device_id(state.entity_id), 'disabled_by')) %}
           {% set result.includedEntities = result.includedEntities + [state.name] %}
         {% endif %}
     {% endfor %}
